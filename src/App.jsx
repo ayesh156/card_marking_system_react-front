@@ -60,6 +60,14 @@ function App() {
         }, 100); // 100ms delay
     };
 
+    window.addEventListener('unload', function (e) {
+        // Example: Send a quick beacon to the server
+        localStorage.removeItem("ACCESS_TOKEN"); // Remove the token
+        Cookies.remove("userEmail"); // Remove the email cookie
+        Cookies.remove("classSelected"); // Remove class selection cookie
+        Cookies.remove("selectedClass"); // Remove selected class cookie
+    });
+
     return (
         <>
             <ColorModeContext.Provider value={colorMode}>
