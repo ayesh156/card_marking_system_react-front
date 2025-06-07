@@ -87,6 +87,7 @@ const Settings = () => {
         beforePaymentWeek4: "",
         afterPaymentTemplate: "",
         afterSpokenPaymentTemplate: "",
+        afterGroupPaymentTemplate: "",
     });
     const [grades, setGrades] = useState([]); // Grades for the "Grade" dropdown
     const [selectedGrade, setSelectedGrade] = useState(""); // Initialize to empty string
@@ -207,6 +208,7 @@ const Settings = () => {
                     beforePaymentWeek4: user.before_payment_week4 || "",
                     afterPaymentTemplate: user.after_payment_template || "",
                     afterSpokenPaymentTemplate: user.after_payment_spoken_template || "",
+                    afterGroupPaymentTemplate: user.after_payment_group_template || "",
                 });
                 // Extract template fields
                 const templates = Object.keys(user)
@@ -244,6 +246,7 @@ const Settings = () => {
             beforePaymentWeek4: values.beforePaymentWeek4,
             afterPaymentTemplate: values.afterPaymentTemplate,
             afterSpokenPaymentTemplate: values.afterSpokenPaymentTemplate,
+            afterGroupPaymentTemplate: values.afterGroupPaymentTemplate,
             status: true, // Default status
             mode: 'A', // Example mode
             image: selectedImage, // Include the image as a base64 string if needed
@@ -709,6 +712,35 @@ const Settings = () => {
                                 onBlur={handleBlur}
                                 onChange={handleChange}
                                 value={values.afterSpokenPaymentTemplate}
+                                sx={{
+                                    gridColumn: "span 4",
+                                    "& .MuiInputBase-root": {
+                                        backgroundColor: colors.primary[400],
+                                    },
+                                    "& .MuiInputBase-root.Mui-disabled": {
+                                        backgroundColor: colors.primary[400], // Change the background color when disabled
+                                        color: colors.grey[100], // Optional: Change the text color when disabled
+                                    },
+                                    "& .MuiInputBase-root.Mui-hovered": {
+                                        backgroundColor: colors.primary[400],
+                                    },
+                                    "& .MuiInputBase-root.Mui-focused": {
+                                        backgroundColor: colors.primary[400],
+                                    },
+                                    "& .MuiInputLabel-root.Mui-focused": {
+                                        color: colors.primary[100],
+                                    },
+                                }}
+                            />
+                            <TextField
+                                fullWidth
+                                variant="filled"
+                                type="text"
+                                label="After Group Payment Template"
+                                name="afterGroupPaymentTemplate"
+                                onBlur={handleBlur}
+                                onChange={handleChange}
+                                value={values.afterGroupPaymentTemplate}
                                 sx={{
                                     gridColumn: "span 4",
                                     "& .MuiInputBase-root": {

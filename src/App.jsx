@@ -3,7 +3,7 @@ import { ColorModeContext, useMode } from "./theme.js";
 import { useState, useEffect } from "react";
 import Sidebar from "./components/global/Sidebar.jsx";
 import Topbar from "./components/global/Topbar.jsx";
-import { Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import GradePage from "./views/GradePage.jsx";
 import StudentPage from "./views/StudentPage.jsx";
 import Classes from "./views/Classes.jsx";
@@ -60,13 +60,30 @@ function App() {
         }, 100); // 100ms delay
     };
 
-    window.addEventListener('unload', function (e) {
-        // Example: Send a quick beacon to the server
+    window.addEventListener('beforeunload', function () {
+        const perf = performance.navigation;
+
+        if (perf.type === PerformanceNavigation.TYPE_RELOAD) {
+            console.log("Page is reloading");
+        } else if (
+            perf.type === PerformanceNavigation.TYPE_NAVIGATE ||
+            perf.type === PerformanceNavigation.TYPE_BACK_FORWARD
+        ) {
+           // Example: Send a quick beacon to the server
         localStorage.removeItem("ACCESS_TOKEN"); // Remove the token
         Cookies.remove("userEmail"); // Remove the email cookie
         Cookies.remove("classSelected"); // Remove class selection cookie
         Cookies.remove("selectedClass"); // Remove selected class cookie
+        }
     });
+
+    // window.addEventListener('unload', function (e) {
+    //     // Example: Send a quick beacon to the server
+    //     localStorage.removeItem("ACCESS_TOKEN"); // Remove the token
+    //     Cookies.remove("userEmail"); // Remove the email cookie
+    //     Cookies.remove("classSelected"); // Remove class selection cookie
+    //     Cookies.remove("selectedClass"); // Remove selected class cookie
+    // });
 
     return (
         <>
@@ -99,11 +116,13 @@ function App() {
                         ) : (
                             <Routes>
                                 <Route path="/" element={<Classes onClassSelect={handleClassSelection} />} />
+                                <Route path="*" element={<Navigate to={"/"} />} />
                             </Routes>
                         )
                     ) : (
                         <Routes>
                             <Route path="/" element={<Login onLogin={handleLogin} />} />
+                            <Route path="*" element={<Navigate to={"/"} />} />
                         </Routes>
                     )}
                 </ThemeProvider>

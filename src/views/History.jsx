@@ -80,9 +80,11 @@ const History = () => {
     const [months, setMonths] = useState([]);
     const [tableDayHeaders, setDableDayHeaders] = useState([]);
     const [routeName, setRouteName] = useState('');
+    const [isGradesLoading, setIsGradesLoading] = useState(false);
 
     // Function to determine which grades to show based on selectedClass
     const fetchGrades = async () => {
+        setIsGradesLoading(true);
         try {
             const response = await axiosClient.post("/grades", {
                 selectedClass, // Send the selected class ID
@@ -104,6 +106,8 @@ const History = () => {
             console.error("Error fetching grades:", error);
             setGrades([]); // Reset grades on error
             setSelectedGrade(""); // Reset grade on error
+        } finally {
+            setIsGradesLoading(false);
         }
     };
 
@@ -138,17 +142,18 @@ const History = () => {
 
 
     // Fetch current date for display
-    useEffect(() => {
-        const date = new Date();
-        const options = { month: "long" };
-        const month = date.toLocaleDateString("en-US", options);
-        const year = date.getFullYear();
-        setCurrentDate(`${year} ${month}`);
+   useEffect(() => {
+    const date = new Date();
+    const options = { month: "long" };
+    const month = date.toLocaleDateString("en-US", options);
+    const year = date.getFullYear();
+    setCurrentDate(`${year} ${month}`);
 
+    if (selectedClass) {
         fetchYearsAndMonths();
         fetchGrades();
-
-    }, []);
+    }
+}, [selectedClass]);
 
     // Fetch children data whenever the grades value is updated
     useEffect(() => {
@@ -360,14 +365,14 @@ const History = () => {
                         const imagePath = '/assets/checkmark-icon.png'; // Path to your checkmark image
                         const { x, y, width, height } = data.cell; // Get cell dimensions
                         const iconSize = 5; // Size of the icon (width and height)
-                
+
                         // Calculate the position to center the icon
                         const centerX = x + (width - iconSize) / 2; // Center horizontally
                         const centerY = y + (height - iconSize) / 2; // Center vertically
-                
+
                         // Add the image to the cell
                         doc.addImage(imagePath, 'PNG', centerX, centerY, iconSize, iconSize);
-                
+
                         // Clear the text content (so the ✔ doesn't appear)
                         data.cell.text = [];
                     }
@@ -641,11 +646,21 @@ const History = () => {
                                 fetchFilteredReports();
                             }}
                         >
-                            {grades.map((grade) => (
-                                <MenuItem key={grade.id} value={grade.id}>
-                                    {grade.grade} {/* Use the 'grade' key from the backend */}
+                            {isGradesLoading ? (
+                                <MenuItem value="" disabled>
+                                    Loading grades...
                                 </MenuItem>
-                            ))}
+                            ) : grades.length > 0 ? (
+                                grades.map((grade) => (
+                                    <MenuItem key={grade.id} value={grade.id}>
+                                        {grade.grade}
+                                    </MenuItem>
+                                ))
+                            ) : (
+                                <MenuItem value="" disabled>
+                                    No grades available
+                                </MenuItem>
+                            )}
                         </Select>
                     </FormControl>
 
