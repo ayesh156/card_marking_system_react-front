@@ -18,7 +18,7 @@ import CircularProgress, {
 } from '@mui/material/CircularProgress';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
-
+import { toast } from "react-toastify"; // Add this import if not already present
 
 // Custom Circular Progress
 function FacebookCircularProgress(props) {
@@ -81,6 +81,7 @@ const History = () => {
     const [tableDayHeaders, setDableDayHeaders] = useState([]);
     const [routeName, setRouteName] = useState('');
     const [isGradesLoading, setIsGradesLoading] = useState(false);
+    const [userEmail, setUserEmail] = useState(Cookies.get("userEmail") || ""); // Selected class
 
     // Function to determine which grades to show based on selectedClass
     const fetchGrades = async () => {
@@ -520,6 +521,7 @@ const History = () => {
             renderCell: (params) => (
                 <Checkbox
                     checked={params.row.paid}
+                    onChange={(e) => handlePaidChange(params.row, e.target.checked)}
                     sx={{
                         color: params.row.notpaid ? "#E74C3C" : "#F1C40F", // Red if notpaid is true, yellow otherwise
                         "&.Mui-checked": {
@@ -530,6 +532,41 @@ const History = () => {
             ),
         },
     ];
+
+    // Function to handle paid status change
+    const handlePaidChange = async (child, checked) => {
+        if (!userEmail) {
+            toast.error("User email is missing. Please log in again.");
+            return;
+        }
+        try {
+            setLoading(true);
+            // Call the new endpoint for updating paid status WITHOUT WhatsApp
+            await axiosClient.post("/update-paid-status", {
+                child_id: child.child_id,
+                tuition_id: selectedGrade,
+                paid: checked,
+                email: userEmail,
+                month: month,
+                year: year,
+            });
+            setChildren((prev) =>
+                prev.map((c) =>
+                    c.child_id === child.child_id ? { ...c, paid: checked } : c
+                )
+            );
+            setFilteredChildren((prev) =>
+                prev.map((c) =>
+                    c.child_id === child.child_id ? { ...c, paid: checked } : c
+                )
+            );
+            toast.success("Paid status updated!");
+        } catch (error) {
+            toast.error("Failed to update paid status.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     if (isPageLoading) {
         return (
