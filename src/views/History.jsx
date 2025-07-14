@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
-import { Checkbox, useTheme, Box, Button, IconButton, InputBase, MenuItem, Typography, FormControl, Select, InputLabel } from "@mui/material";
+import { Checkbox, useTheme, Box, Button, IconButton, InputBase, MenuItem, Typography, FormControl, Select, InputLabel, useMediaQuery } from "@mui/material";
 import { tokens } from "../theme";
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { ToastContainer } from "react-toastify";
@@ -19,6 +19,9 @@ import CircularProgress, {
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { toast } from "react-toastify"; // Add this import if not already present
+import StatsCard from "../components/StatsCard";
+import PeopleIcon from '@mui/icons-material/People';
+import PaidOutlinedIcon from '@mui/icons-material/PaidOutlined';
 
 // Custom Circular Progress
 function FacebookCircularProgress(props) {
@@ -82,6 +85,7 @@ const History = () => {
     const [routeName, setRouteName] = useState('');
     const [isGradesLoading, setIsGradesLoading] = useState(false);
     const [userEmail, setUserEmail] = useState(Cookies.get("userEmail") || ""); // Selected class
+    const isNonMobile = useMediaQuery("(min-width:800px)");
 
     // Function to determine which grades to show based on selectedClass
     const fetchGrades = async () => {
@@ -143,18 +147,18 @@ const History = () => {
 
 
     // Fetch current date for display
-   useEffect(() => {
-    const date = new Date();
-    const options = { month: "long" };
-    const month = date.toLocaleDateString("en-US", options);
-    const year = date.getFullYear();
-    setCurrentDate(`${year} ${month}`);
+    useEffect(() => {
+        const date = new Date();
+        const options = { month: "long" };
+        const month = date.toLocaleDateString("en-US", options);
+        const year = date.getFullYear();
+        setCurrentDate(`${year} ${month}`);
 
-    if (selectedClass) {
-        fetchYearsAndMonths();
-        fetchGrades();
-    }
-}, [selectedClass]);
+        if (selectedClass) {
+            fetchYearsAndMonths();
+            fetchGrades();
+        }
+    }, [selectedClass]);
 
     // Fetch children data whenever the grades value is updated
     useEffect(() => {
@@ -568,6 +572,10 @@ const History = () => {
         }
     };
 
+    // Calculate paid and total counts
+    const paidCount = filteredChildren.filter(child => child.paid).length;
+    const totalCount = filteredChildren.length;
+
     if (isPageLoading) {
         return (
             <Box
@@ -584,6 +592,41 @@ const History = () => {
 
     return (
         <Box m="20px">
+            {/* Stats Cards - Using Flexbox instead of Grid */}
+            <Box
+                display="grid"
+                gap="30px"
+                gridTemplateColumns={{
+                    xs: "repeat(1, 1fr)", // 1 column for small screens
+                    sm: "repeat(2, minmax(0, 1fr))"
+                }}
+                sx={{
+                    mt: 5,
+                    gridColumn: "span 4",
+                    marginX: isNonMobile ? "15vw" : undefined,
+                    mb: { xs: 3, md: 1 },
+                }}
+            >
+                <Box >
+                    <StatsCard
+                        title="Total Students"
+                        value={totalCount}
+                        subtext="All active students"
+                        icon={<PeopleIcon />}
+                        color={colors.blueAccent[400]}
+                    />
+                </Box>
+                <Box >
+                    <StatsCard
+                        title="Paid Students"
+                        value={paidCount}
+                        subtext="Students who paid this month"
+                        icon={<PaidOutlinedIcon />}
+                        color={colors.redAccent[400]}
+                    />
+                </Box>
+            </Box>
+
             <Box
                 sx={{
                     display: "flex",
