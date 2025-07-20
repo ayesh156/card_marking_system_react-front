@@ -86,6 +86,9 @@ const History = () => {
     const [isGradesLoading, setIsGradesLoading] = useState(false);
     const [userEmail, setUserEmail] = useState(Cookies.get("userEmail") || ""); // Selected class
     const isNonMobile = useMediaQuery("(min-width:800px)");
+    const [totalActiveStudents, setTotalActiveStudents] = useState(0);
+    const [totalPaidStudents, setTotalPaidStudents] = useState(0);
+    const [hasFetched, setHasFetched] = useState(false); // Add this state
 
     // Function to determine which grades to show based on selectedClass
     const fetchGrades = async () => {
@@ -160,6 +163,21 @@ const History = () => {
         }
     }, [selectedClass]);
 
+    useEffect(() => {
+        if (selectedClass) {
+            // Fetch total active students and paid students for this month, filtered by selectedClass
+            axiosClient
+                .post("/dashboard-stats", { selectedClass: selectedClass })
+                .then((res) => {
+                    setTotalActiveStudents(res.data.totalActiveStudents);
+                    setTotalPaidStudents(res.data.totalPaidStudents);
+                })
+                .catch((err) => {
+                    console.error("Error fetching dashboard stats:", err);
+                });
+        }
+    }, []);
+
     // Fetch children data whenever the grades value is updated
     useEffect(() => {
         if (selectedGrade && year && month) {
@@ -228,6 +246,9 @@ const History = () => {
 
     const fetchFilteredReports = async () => {
         setLoading(true);
+        setHasFetched(true); // Mark that a fetch has been attempted
+        setChildren([]); // Clear previous data
+        setFilteredChildren([]); // Clear previous data
 
         try {
             const response = await axiosClient.get('/history', {
@@ -240,12 +261,12 @@ const History = () => {
 
             const { students, dayHeaders } = response.data;
 
-            if (!students) {
-                // If students is null, only update dayHeaders
-                setDableDayHeaders(dayHeaders);
-                setChildren([]); // Reset children state
-                setFilteredChildren([]); // Reset filteredChildren state
-                return; // Exit the function
+            setDableDayHeaders(dayHeaders);
+
+            if (!students || students.length === 0) {
+                setChildren([]); // No data
+                setFilteredChildren([]);
+                return;
             }
 
             // Filter the response data
@@ -256,26 +277,19 @@ const History = () => {
                     child.week3,
                     child.week4,
                     child.week5,
-                ].filter(Boolean).length; // Count the number of true weeks
-
-                // Include the child only if:
-                // - status is true, OR
-                // - at least two weeks are true OR paid is true
+                ].filter(Boolean).length;
                 return (
                     child.status || (weeksTrueCount >= 2 || child.paid)
                 );
             });
 
-            // Update the state with the filtered data
             setChildren(filteredData);
             setFilteredChildren(filteredData);
-            setDableDayHeaders(dayHeaders); // Store the calculated day headers
         } catch (error) {
-            console.error("Error fetching reports:", error);
-            // Reset states in case of an error
-            setFilteredChildren([]);
             setChildren([]);
+            setFilteredChildren([]);
             setDableDayHeaders([]);
+            console.error("Error fetching reports:", error);
         } finally {
             setLoading(false);
         }
@@ -572,9 +586,6 @@ const History = () => {
         }
     };
 
-    // Calculate paid and total counts
-    const paidCount = filteredChildren.filter(child => child.paid).length;
-    const totalCount = filteredChildren.length;
 
     if (isPageLoading) {
         return (
@@ -610,7 +621,7 @@ const History = () => {
                 <Box >
                     <StatsCard
                         title="Total Students"
-                        value={totalCount}
+                        value={totalActiveStudents}
                         subtext="All active students"
                         icon={<PeopleIcon />}
                         color={colors.blueAccent[400]}
@@ -619,7 +630,7 @@ const History = () => {
                 <Box >
                     <StatsCard
                         title="Paid Students"
-                        value={paidCount}
+                        value={totalPaidStudents}
                         subtext="Students who paid this month"
                         icon={<PaidOutlinedIcon />}
                         color={colors.redAccent[400]}
@@ -721,9 +732,7 @@ const History = () => {
                             id="grade-select"
                             value={selectedGrade || ""}
                             onChange={(e) => {
-                                const newSelectedGrade = e.target.value; // Get the newly selected grade ID
-                                setSelectedGrade(newSelectedGrade); // Update the state with the new grade ID
-                                fetchFilteredReports();
+                                setSelectedGrade(e.target.value); // Only update state
                             }}
                         >
                             {isGradesLoading ? (
@@ -770,7 +779,6 @@ const History = () => {
                             value={year || ""}
                             onChange={(e) => {
                                 setYear(e.target.value); // Update the year state
-                                fetchFilteredReports(); // Fetch filtered reports
                             }}
                         >
                             {years.map((y) => (
@@ -807,7 +815,6 @@ const History = () => {
                             value={month || ""}
                             onChange={(e) => {
                                 setMonth(e.target.value); // Update the month state
-                                fetchFilteredReports(); // Fetch filtered reports
                             }}
                         >
                             {months.map((m) => (
@@ -865,62 +872,68 @@ const History = () => {
 
                 </Box>
             </Box>
-            <Box
-                m="40px 0 0 0"
-                height="75vh"
-                sx={{
-                    overflow: "auto",
-                    "& .MuiDataGrid-cell": {
-                        borderBottom: `1px solid ${colors.grey[300]}`, // Change this to your desired color
-                    },
-                    "& .MuiDataGrid-root": {
-                        border: "none",
-                    },
-                    "& .name-column--cell": {
-                        color: colors.greenAccent[300],
-                    },
-                    "& .MuiDataGrid-columnHeader": {
-                        backgroundColor: colors.blueAccent[700],
-                        borderBottom: "none",
-                    },
-                    "& .MuiDataGrid-virtualScroller": {
-                        backgroundColor: colors.primary[400],
-                    },
-                    "& .MuiDataGrid-footerContainer": {
-                        borderTop: "none",
-                        backgroundColor: colors.blueAccent[700],
-                    },
-                    "& .MuiDataGrid-toolbarContainer .MuiButton-text": {
-                        color: `${colors.grey[500]} !important`,
-                    },
-                }}
-            >
-                <ToastContainer />
-                <DataGrid
-                    rows={filteredChildren} // Use the formatted data
-                    columns={columns}
-                    loading={loading}
-                    slotProps={{
-                        loadingOverlay: {
-                            variant: 'linear-progress',
-                            noRowsVariant: 'linear-progress',
-                            sx: {
-                                '& .MuiLinearProgress-bar': {
-                                    backgroundColor: colors.grey[100], // White for dark mode, black for light mode
-                                },
-                            },
+            {hasFetched && (
+                <Box
+                    m="40px 0 0 0"
+                    height="75vh"
+                    sx={{
+                        overflow: "auto",
+                        "& .MuiDataGrid-cell": {
+                            borderBottom: `1px solid ${colors.grey[300]}`, // Change this to your desired color
+                        },
+                        "& .MuiDataGrid-root": {
+                            border: "none",
+                        },
+                        "& .name-column--cell": {
+                            color: colors.greenAccent[300],
+                        },
+                        "& .MuiDataGrid-columnHeader": {
+                            backgroundColor: colors.blueAccent[700],
+                            borderBottom: "none",
+                        },
+                        "& .MuiDataGrid-virtualScroller": {
+                            backgroundColor: colors.primary[400],
+                        },
+                        "& .MuiDataGrid-footerContainer": {
+                            borderTop: "none",
+                            backgroundColor: colors.blueAccent[700],
+                        },
+                        "& .MuiDataGrid-toolbarContainer .MuiButton-text": {
+                            color: `${colors.grey[500]} !important`,
                         },
                     }}
-                    pageSize={5}
-                    rowsPerPageOptions={[5, 10, 20]}
-                    disableSelectionOnClick
-                    getRowId={(row) => row.child_id}// Use the `id` field as the unique identifier
-                    sx={{
-                        minWidth: '1000px',
-                    }}
-                />
-            </Box>
-
+                >
+                    <ToastContainer />
+                    <DataGrid
+                        rows={filteredChildren}
+                        columns={columns}
+                        loading={loading}
+                        components={{
+                            NoRowsOverlay: () => (
+                                <Box
+                                    sx={{
+                                        display: "flex",
+                                        justifyContent: "center",
+                                        alignItems: "center",
+                                        height: "100%",
+                                        color: colors.grey[400],
+                                        fontSize: 18,
+                                    }}
+                                >
+                                    No data
+                                </Box>
+                            ),
+                        }}
+                        pageSize={5}
+                        rowsPerPageOptions={[5, 10, 20]}
+                        disableSelectionOnClick
+                        getRowId={(row) => row.child_id}
+                        sx={{
+                            minWidth: '1000px',
+                        }}
+                    />
+                </Box>
+            )}
         </Box>
     );
 };
