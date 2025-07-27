@@ -96,8 +96,9 @@ const StudentPage = () => {
     const [isPageLoading, setIsPageLoading] = useState(false);
     const navigate = useNavigate();
     const location = useLocation(); // Access the passed state
+    const nextStudentNo = location.state?.nextStudentNo; // Get from navigation state
     const [initialFormValues, setInitialFormValues] = useState({
-        sno: "",
+        sno: nextStudentNo || "",
         name: "",
         dob: null,
         address1: "",
@@ -243,7 +244,14 @@ const StudentPage = () => {
         }
     }, [childId]);
 
-
+    useEffect(() => {
+        if (!isUpdate && nextStudentNo) {
+            setInitialFormValues((prev) => ({
+                ...prev,
+                sno: nextStudentNo,
+            }));
+        }
+    }, [nextStudentNo, isUpdate]);
 
     const resetFormState = (resetForm, setFieldValue) => {
         resetForm();

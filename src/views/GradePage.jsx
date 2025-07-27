@@ -368,6 +368,13 @@ const GradePage = () => {
         }
     };
 
+    const getNextStudentNo = () => {
+        if (!filteredChildren.length) return "1";
+        // Find the max sno (as number), add 1
+        const maxSno = Math.max(...filteredChildren.map(child => parseInt(child.sno, 10) || 0));
+        return (maxSno + 1).toString();
+    };
+
     // Define columns for DataGrid
     const columns = [
         {
@@ -588,8 +595,8 @@ const GradePage = () => {
                     subtitle="Effortlessly manage grades with our intuitive interface."
                 />
                 <Link
-                    to="student" // Dynamically set the path
-                    state={{ tuitionId }} // Pass the parameters as state
+                    to="student"
+                    state={{ tuitionId, nextStudentNo: getNextStudentNo() }} // Pass nextStudentNo in state
                     style={{ marginLeft: "auto" }}
                 >
                     <Button
