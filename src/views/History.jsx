@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
-import { Checkbox, useTheme, Box, Button, IconButton, InputBase, MenuItem, Typography, FormControl, Select, InputLabel, useMediaQuery } from "@mui/material";
+import { Checkbox, useTheme, Box, Button, IconButton, InputBase, MenuItem, Typography, FormControl, Select, InputLabel, useMediaQuery, TextField } from "@mui/material";
 import { tokens } from "../theme";
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { ToastContainer } from "react-toastify";
@@ -89,6 +89,10 @@ const History = () => {
     const [totalActiveStudents, setTotalActiveStudents] = useState(0);
     const [totalPaidStudents, setTotalPaidStudents] = useState(0);
     const [hasFetched, setHasFetched] = useState(false); // Add this state
+    const [paidCountForTuition, setPaidCountForTuition] = useState(0);
+    const [selectedChildren, setSelectedChildren] = useState([]); // IDs of selected children
+    const [message, setMessage] = useState(""); // Message input
+    const [sendBtnLoading, setSendBtnLoading] = useState(false);
 
     // Function to determine which grades to show based on selectedClass
     const fetchGrades = async () => {
@@ -408,6 +412,32 @@ const History = () => {
     // Define columns for DataGrid
     const columns = [
         {
+            field: "select",
+            headerName: "Select",
+            flex: 0.6,
+            renderHeader: () => (
+                <Checkbox
+                    checked={selectedChildren.length === filteredChildren.length && filteredChildren.length > 0}
+                    indeterminate={selectedChildren.length > 0 && selectedChildren.length < filteredChildren.length}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    sx={{
+                        color: `${colors.grey[100]}`,
+                        "&.Mui-checked": { color: `${colors.grey[100]}` },
+                    }}
+                />
+            ),
+            renderCell: (params) => (
+                <Checkbox
+                    checked={selectedChildren.includes(params.row.child_id)}
+                    onChange={() => handleRowSelection(params.row.child_id)}
+                    sx={{
+                        color: `${colors.grey[100]}`,
+                        "&.Mui-checked": { color: `${colors.grey[100]}` },
+                    }}
+                />
+            ),
+        },
+        {
             field: "sno",
             headerName: "No.",
             flex: 0.5
@@ -586,6 +616,78 @@ const History = () => {
         }
     };
 
+    // Handle checkbox selection for rows
+    const handleRowSelection = (childId) => {
+        setSelectedChildren((prevSelected) => {
+            if (prevSelected.includes(childId)) {
+                // If already selected, remove it
+                return prevSelected.filter((id) => id !== childId);
+            } else {
+                // Otherwise, add it
+                return [...prevSelected, childId];
+            }
+        });
+    };
+
+    // Handle "Select All" checkbox
+    const handleSelectAll = (isChecked) => {
+        if (isChecked) {
+            // Select all filtered rows
+            const filteredChildIds = filteredChildren.map((child) => child.child_id);
+            setSelectedChildren(filteredChildIds);
+        } else {
+            // Deselect all
+            setSelectedChildren([]);
+        }
+    };
+
+    // Handle sending messages
+    const handleSendAll = async () => {
+        if (message.trim() === "") {
+            ToastNotification("Message is empty. Please enter a message.", "warning", themeMode);
+            return;
+        }
+        if (!selectedGrade) {
+            ToastNotification("Tuition ID is missing. Please try again.", "error", themeMode);
+            return;
+        }
+        setSendBtnLoading(true);
+        try {
+            await axiosClient.post("/send-message-to-tuitions", {
+                message,
+                tuition_id: selectedGrade,
+                child_ids: selectedChildren,
+            });
+            ToastNotification("Messages sent successfully!", "success", themeMode);
+        } catch (error) {
+            ToastNotification(`Error sending messages: ${error.response?.data?.message || error.message}`, "error", themeMode);
+        } finally {
+            setSendBtnLoading(false);
+            setMessage("");
+            setSelectedChildren([]);
+        }
+    };
+
+    // Fetch paid student count for selected tuition
+    useEffect(() => {
+        if (selectedGrade && year && month) {
+            axiosClient
+                .get('/history', {
+                    params: {
+                        tuitionId: selectedGrade,
+                        year,
+                        month,
+                    },
+                })
+                .then((response) => {
+                    const students = response.data.students || [];
+                    // Count students where paid is true
+                    const paidCount = students.filter((s) => s.paid).length;
+                    setPaidCountForTuition(paidCount);
+                })
+                .catch(() => setPaidCountForTuition(0));
+        }
+    }, [selectedGrade, year, month]);
 
     if (isPageLoading) {
         return (
@@ -630,7 +732,7 @@ const History = () => {
                 <Box >
                     <StatsCard
                         title="Paid Students"
-                        value={totalPaidStudents}
+                        value={paidCountForTuition}
                         subtext="Students who paid this month"
                         icon={<PaidOutlinedIcon />}
                         color={colors.redAccent[400]}
@@ -934,6 +1036,98 @@ const History = () => {
                     />
                 </Box>
             )}
+
+            {/* Message input and send button */}
+            <Box
+                sx={{
+                    display: "flex",
+                    flexDirection: { xs: "column", sm: "row" },
+                    gap: "20px",
+                    mt: 5,
+                    width: "100%",
+                }}
+            >
+              
+                <TextField
+                                    label="Enter your message"
+                                    multiline
+                                    rows={1}
+                                    fullWidth
+                                    color="secondary"
+                                    value={message} // Bind the TextField value to the state
+                                    onChange={(e) => setMessage(e.target.value)} // Update the state on change
+                                    sx={{
+                                        width: "100%",
+                                        backgroundColor: colors.primary[400],
+                                    }}
+                                />
+                <Box
+                   sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        flexDirection: { xs: "column", sm: "row" }, // Stack on small screens, inline on larger screens
+                        gap: { xs: 2, sm: 3 }, // Adjust gap for small and large screens
+                        width: { xs: "100%", sm: "auto" }, // Full width on small screens
+                    }}
+                >
+                    <Button
+                                            endIcon={<RefreshOutlinedIcon />}
+                                            variant="contained"
+                                            type="button"
+                                            onClick={() => setMessage("")} // Clear the TextField value
+                                            sx={{
+                                                gridColumn: "span 4",
+                                                width: "120px",
+                                                textTransform: "capitalize",
+                                                color: colors.grey[100],
+                                                fontSize: "17px",
+                                                fontWeight: "500",
+                                                paddingY: "10px",
+                                                backgroundColor: colors.redAccent[600],
+                                                "&:hover": {
+                                                    backgroundColor: colors.redAccent[500],
+                                                },
+                                                "@media (max-width: 767px)": {
+                                                    width: "100%",
+                                                    fontSize: "14px",
+                                                    paddingX: "20px",
+                                                    height: "40px",
+                                                },
+                                            }}
+                                        >
+                        Clear
+                    </Button>
+                    <Button
+                        loading={sendBtnLoading}
+                        loadingPosition="end"
+                        endIcon={<SendIcon />}
+                        variant="contained"
+                        type="button"
+                        onClick={handleSendAll}
+                        sx={{
+                            gridColumn: "span 4",
+                            width: "150px",
+                            textTransform: "capitalize",
+                            color: colors.grey[100],
+                            fontSize: "17px",
+                            fontWeight: "500",
+                            paddingY: "10px",
+                            backgroundColor: colors.blueAccent[700],
+                            "&:hover": {
+                                backgroundColor: colors.blueAccent[600],
+                            },
+                            "@media (max-width: 767px)": {
+                                width: "100%",
+                                fontSize: "14px",
+                                paddingX: "20px",
+                                height: "40px",
+                            },
+                        }}
+                    >
+                        Send
+                    </Button>
+                </Box>
+            </Box>
         </Box>
     );
 };
