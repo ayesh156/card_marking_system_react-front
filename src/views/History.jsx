@@ -179,12 +179,35 @@ const History = () => {
             .post("/dashboard-stats", { selectedClass: selectedClass })
             .then((res) => {
                 setTotalActiveStudents(res.data.totalActiveStudents);
-                setTotalPaidStudents(res.data.totalPaidStudents);
             })
             .catch((err) => {
                 console.error("Error fetching dashboard stats:", err);
             });
     }
+
+    // Function to fetch paid students count for selected tuition, year, and month
+    const fetchPaidStudentsCount = async () => {
+        if (year && month) {
+            try {
+                const response = await axiosClient.get('/paid-students-count', {
+                    params: {
+                        year,
+                        month,
+                    },
+                });
+                setTotalPaidStudents(response.data.paidCount || 0);
+            } catch (error) {
+                setTotalPaidStudents(0);
+            }
+        }
+    };
+
+    // Fetch children data whenever the grades value is updated
+    useEffect(() => {
+        if (year && month) {
+            fetchPaidStudentsCount();
+        }
+    }, [year, month]);
 
     // Fetch children data whenever the grades value is updated
     useEffect(() => {
@@ -613,7 +636,8 @@ const History = () => {
                 )
             );
             toast.success("Paid status updated!");
-            dashboardStats(); // Refresh dashboard stats
+            fetchPaidStudentsCount(); // Refresh paid students count
+
         } catch (error) {
             toast.error("Failed to update paid status.");
         } finally {
