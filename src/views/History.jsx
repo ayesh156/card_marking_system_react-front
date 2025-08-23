@@ -169,18 +169,22 @@ const History = () => {
 
     useEffect(() => {
         if (selectedClass) {
-            // Fetch total active students and paid students for this month, filtered by selectedClass
-            axiosClient
-                .post("/dashboard-stats", { selectedClass: selectedClass })
-                .then((res) => {
-                    setTotalActiveStudents(res.data.totalActiveStudents);
-                    setTotalPaidStudents(res.data.totalPaidStudents);
-                })
-                .catch((err) => {
-                    console.error("Error fetching dashboard stats:", err);
-                });
+            dashboardStats();
         }
     }, []);
+
+    const dashboardStats = async () => {
+        // Fetch total active students and paid students for this month, filtered by selectedClass
+        axiosClient
+            .post("/dashboard-stats", { selectedClass: selectedClass })
+            .then((res) => {
+                setTotalActiveStudents(res.data.totalActiveStudents);
+                setTotalPaidStudents(res.data.totalPaidStudents);
+            })
+            .catch((err) => {
+                console.error("Error fetching dashboard stats:", err);
+            });
+    }
 
     // Fetch children data whenever the grades value is updated
     useEffect(() => {
@@ -609,6 +613,7 @@ const History = () => {
                 )
             );
             toast.success("Paid status updated!");
+            dashboardStats(); // Refresh dashboard stats
         } catch (error) {
             toast.error("Failed to update paid status.");
         } finally {
@@ -668,26 +673,6 @@ const History = () => {
         }
     };
 
-    // Fetch paid student count for selected tuition
-    useEffect(() => {
-        if (selectedGrade && year && month) {
-            axiosClient
-                .get('/history', {
-                    params: {
-                        tuitionId: selectedGrade,
-                        year,
-                        month,
-                    },
-                })
-                .then((response) => {
-                    const students = response.data.students || [];
-                    // Count students where paid is true
-                    const paidCount = students.filter((s) => s.paid).length;
-                    setPaidCountForTuition(paidCount);
-                })
-                .catch(() => setPaidCountForTuition(0));
-        }
-    }, [selectedGrade, year, month]);
 
     if (isPageLoading) {
         return (
@@ -732,7 +717,7 @@ const History = () => {
                 <Box >
                     <StatsCard
                         title="Paid Students"
-                        value={paidCountForTuition}
+                        value={totalPaidStudents}
                         subtext="Students who paid this month"
                         icon={<PaidOutlinedIcon />}
                         color={colors.redAccent[400]}
@@ -1047,22 +1032,22 @@ const History = () => {
                     width: "100%",
                 }}
             >
-              
+
                 <TextField
-                                    label="Enter your message"
-                                    multiline
-                                    rows={1}
-                                    fullWidth
-                                    color="secondary"
-                                    value={message} // Bind the TextField value to the state
-                                    onChange={(e) => setMessage(e.target.value)} // Update the state on change
-                                    sx={{
-                                        width: "100%",
-                                        backgroundColor: colors.primary[400],
-                                    }}
-                                />
+                    label="Enter your message"
+                    multiline
+                    rows={1}
+                    fullWidth
+                    color="secondary"
+                    value={message} // Bind the TextField value to the state
+                    onChange={(e) => setMessage(e.target.value)} // Update the state on change
+                    sx={{
+                        width: "100%",
+                        backgroundColor: colors.primary[400],
+                    }}
+                />
                 <Box
-                   sx={{
+                    sx={{
                         display: "flex",
                         alignItems: "center",
                         flexDirection: { xs: "column", sm: "row" }, // Stack on small screens, inline on larger screens
@@ -1071,30 +1056,30 @@ const History = () => {
                     }}
                 >
                     <Button
-                                            endIcon={<RefreshOutlinedIcon />}
-                                            variant="contained"
-                                            type="button"
-                                            onClick={() => setMessage("")} // Clear the TextField value
-                                            sx={{
-                                                gridColumn: "span 4",
-                                                width: "120px",
-                                                textTransform: "capitalize",
-                                                color: colors.grey[100],
-                                                fontSize: "17px",
-                                                fontWeight: "500",
-                                                paddingY: "10px",
-                                                backgroundColor: colors.redAccent[600],
-                                                "&:hover": {
-                                                    backgroundColor: colors.redAccent[500],
-                                                },
-                                                "@media (max-width: 767px)": {
-                                                    width: "100%",
-                                                    fontSize: "14px",
-                                                    paddingX: "20px",
-                                                    height: "40px",
-                                                },
-                                            }}
-                                        >
+                        endIcon={<RefreshOutlinedIcon />}
+                        variant="contained"
+                        type="button"
+                        onClick={() => setMessage("")} // Clear the TextField value
+                        sx={{
+                            gridColumn: "span 4",
+                            width: "120px",
+                            textTransform: "capitalize",
+                            color: colors.grey[100],
+                            fontSize: "17px",
+                            fontWeight: "500",
+                            paddingY: "10px",
+                            backgroundColor: colors.redAccent[600],
+                            "&:hover": {
+                                backgroundColor: colors.redAccent[500],
+                            },
+                            "@media (max-width: 767px)": {
+                                width: "100%",
+                                fontSize: "14px",
+                                paddingX: "20px",
+                                height: "40px",
+                            },
+                        }}
+                    >
                         Clear
                     </Button>
                     <Button
