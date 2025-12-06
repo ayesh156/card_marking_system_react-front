@@ -291,12 +291,16 @@ const Sidebar = ({ userEmail }) => {
                                                 : `${categoryPrefix}${grade
                                                     .replace(/Grade\s/g, "") // Remove "Grade"
                                                     .replace(/,\s/g, "-") // Replace ", " with "-"
+                                                    .replace(/\s+/g, "") // Remove all spaces (including spaces before year like "1a 2026" -> "1a2026")
                                                     .toLowerCase()}`; // Convert to lowercase
 
-                                            // Display logic: convert "grade1b" to "Grade 1 - B"
+                                            // Display logic: convert "grade1b" to "Grade 1 - B" or "grade 1a 2026" to "Grade 1 - A 2026"
                                             let displayGrade = grade;
+                                            const matchWithYear = grade.match(/^grade\s*(\d+)[\s-]*([a-z])\s*(\d{4})$/i);
                                             const match = grade.match(/^grade\s*(\d+)[\s-]*([a-z])$/i);
-                                            if (match) {
+                                            if (matchWithYear) {
+                                                displayGrade = `Grade ${matchWithYear[1]} - ${matchWithYear[2].toUpperCase()} ${matchWithYear[3]}`;
+                                            } else if (match) {
                                                 displayGrade = `Grade ${match[1]} - ${match[2].toUpperCase()}`;
                                             }
 

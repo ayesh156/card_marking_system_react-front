@@ -158,7 +158,7 @@ const StudentPage = () => {
     );
 
     useEffect(() => {
-        const pathName = location.pathname.split("/")[1]; // Get the part after "/"
+        const pathName = decodeURIComponent(location.pathname.split("/")[1]); // Get the part after "/" and decode URI
 
         // Map category abbreviations to full names
         const categoryMap = {
@@ -170,18 +170,21 @@ const StudentPage = () => {
 
         // Extract the category prefix and grade(s)
         const categoryPrefix = pathName.charAt(0); // First letter (e.g., 's', 't', 'g', 'p')
-        const grades = pathName.slice(1).replace(/-/g, ", "); // Extract grades and replace '-' with ', '
+        const gradesRaw = pathName.slice(1).replace(/-/g, ", "); // Extract grades and replace '-' with ', '
 
         // Set the title dynamically
         if (categoryMap[categoryPrefix]) {
             const categoryName = categoryMap[categoryPrefix];
 
             // Special case for "P" to display "Nursery"
-            if (grades.toLowerCase() === "n") {
+            if (gradesRaw.toLowerCase() === "n") {
                 setPageTitle(isUpdate ? `Update Nursery ${categoryName} Student` : `New Nursery ${categoryName} Student`);
             } else {
                 // Format "1b" as "1 - B" (and also handle multiple grades like "1b, 2a")
-                const formattedGrades = grades.replace(/(\d+)\s*([a-zA-Z])/g, (m, num, letter) => `${num} - ${letter.toUpperCase()}`);
+                // Also handle year suffix like "1a2026" -> "1 - A 2026"
+                const formattedGrades = gradesRaw.replace(/(\d+)\s*([a-zA-Z])(\d{4})?/g, (m, num, letter, year) => 
+                    year ? `${num} - ${letter.toUpperCase()} ${year}` : `${num} - ${letter.toUpperCase()}`
+                );
                 setPageTitle(isUpdate ? `Update Grade ${formattedGrades} ${categoryName} Student` : `New Grade ${formattedGrades} ${categoryName} Student`);
             }
         } else {
@@ -505,11 +508,14 @@ const StudentPage = () => {
                                                 setButtonText("Enable");
                                             }
                                         }}
-                                        renderOption={(props, option) => (
-                                            <li key={option.sno} {...props}>
-                                                {option.name} (S.No: {option.sno})
-                                            </li>
-                                        )}
+                                        renderOption={(props, option, { index }) => {
+                                            const { key, ...otherProps } = props;
+                                            return (
+                                                <li key={`${option.sno}-${index}`} {...otherProps}>
+                                                    {option.name} (S.No: {option.sno})
+                                                </li>
+                                            );
+                                        }}
                                         renderInput={(params) => (
                                             <TextField
                                                 {...params}

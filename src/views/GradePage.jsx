@@ -38,7 +38,7 @@ const GradePage = () => {
 
     // Set the header title based on the location path name
     useEffect(() => {
-        const pathName = location.pathname.split("/")[1]; // Get the part after "/"
+        const pathName = decodeURIComponent(location.pathname.split("/")[1]); // Get the part after "/" and decode URI
 
         // Map category abbreviations to full names
         const categoryMap = {
@@ -50,7 +50,10 @@ const GradePage = () => {
 
         // Extract the category prefix and grade(s)
         const categoryPrefix = pathName.charAt(0); // First letter (e.g., 's', 't', 'g', 'p')
-        const grades = pathName.slice(1).replace(/-/g, ", "); // Extract grades and replace '-' with ', '
+        const gradesRaw = pathName.slice(1).replace(/-/g, ", "); // Extract grades and replace '-' with ', '
+        
+        // Format grades for backend: "1a2026" -> "1a 2026", "1a" stays as "1a"
+        const grades = gradesRaw.replace(/(\d+[a-zA-Z])(\d{4})/g, '$1 $2');
 
         setGrade(grades); // Set the grade state
         // Set the category state
@@ -66,7 +69,10 @@ const GradePage = () => {
                 setGradeTitle(`Nursery ${categoryName}`);
             } else {
                 // Format "1b" as "1 - B" (and also handle multiple grades like "1b, 2a")
-                const formattedGrades = grades.replace(/(\d+)\s*([a-zA-Z])/g, (m, num, letter) => `${num} - ${letter.toUpperCase()}`);
+                // Also handle year suffix like "1a2026" -> "1 - A 2026"
+                const formattedGrades = gradesRaw.replace(/(\d+)\s*([a-zA-Z])(\d{4})?/g, (m, num, letter, year) => 
+                    year ? `${num} - ${letter.toUpperCase()} ${year}` : `${num} - ${letter.toUpperCase()}`
+                );
                 setGradeTitle(`Grade ${formattedGrades} ${categoryName}`);
             }
         } else {
